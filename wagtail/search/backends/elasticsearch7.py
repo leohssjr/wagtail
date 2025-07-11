@@ -178,6 +178,8 @@ class Elasticsearch7Mapping:
             if isinstance(field, SearchField):
                 if mapping["type"] == "string":
                     mapping["type"] = self.text_type
+                    mapping["analyzer"] = "standard_asciifolding_analyzer"
+                    mapping["search_analyzer"] = "standard_asciifolding_analyzer"
 
                 if field.boost:
                     mapping["boost"] = field.boost
@@ -197,7 +199,7 @@ class Elasticsearch7Mapping:
                     mapping[key] = value
 
             return self.get_field_column_name(field), mapping
-
+    
     def get_mapping(self):
         # Make field list
         fields = {
@@ -211,10 +213,13 @@ class Elasticsearch7Mapping:
             key, val = self.get_field_mapping(field)
             fields[key] = val
 
-        # Add _all_text field
-        fields[self.all_field_name] = {"type": "text"}
 
-        unique_boosts = set()
+        fields[self.all_field_name] = {
+            "type": "text",
+            "analyzer": "standard_asciifolding_analyzer",
+            "search_analyzer": "standard_asciifolding_analyzer"
+        }
+
 
         # Replace {"include_in_all": true} with {"copy_to": ["_all_text", "_all_text_boost_2"]}
         def replace_include_in_all(properties):
@@ -1161,6 +1166,11 @@ class Elasticsearch7SearchBackend(BaseSearchBackend):
                         "type": "custom",
                         "tokenizer": "standard",
                         "filter": ["asciifolding", "lowercase", "edgengram"],
+                    },
+                    "standard_asciifolding_analyzer": {
+                        "type": "custom",
+                        "tokenizer": "standard",
+                        "filter": ["asciifolding", "lowercase"],
                     },
                 },
                 "tokenizer": {
